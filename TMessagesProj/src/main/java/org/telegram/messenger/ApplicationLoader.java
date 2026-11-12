@@ -39,6 +39,7 @@ import org.json.JSONObject;
 import org.telegram.messenger.utils.Choreographer60FpsContent;
 import org.telegram.messenger.voip.VideoCapturerDevice;
 import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.utils.proxy.ProxySettings;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.ForegroundDetector;
@@ -247,6 +248,7 @@ public class ApplicationLoader extends Application {
         }
 
         SharedConfig.loadConfig();
+        initializeUgramProxy();
         SharedPrefsHelper.init(applicationContext);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
             UserConfig.getInstance(a).loadConfig();
@@ -279,6 +281,52 @@ public class ApplicationLoader extends Application {
         // frame does not wait for it.
         AndroidUtilities.runOnUIThread(() -> Utilities.globalQueue.postRunnable(
                 () -> org.telegram.utils.twidget.WidgetSandboxSession.prewarmEngine(applicationContext)), 3000);
+    }
+
+
+    /**
+     * Applies the optional UGRAM default MTProto proxy before account network
+     * connections are initialized. Credentials are supplied through the
+     * developer's untracked local.properties file, never committed to Git.
+     */
+    private static void initializeUgramProxy() {
+        if (BuildConfig.UGRAM_PROXY_HOST == null || BuildConfig.UGRAM_PROXY_HOST.isEmpty()
+                || BuildConfig.UGRAM_PROXY_SECRET == null || BuildConfig.UGRAM_PROXY_SECRET.isEmpty()
+                || BuildConfig.UGRAM_PROXY_PORT <= 0) {
+            return;
+        }
+        try {
+            SharedPreferences preferences = applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+            if (preferences.getBoolean("ugram_proxy_user_override", false)) {
+                return;
+            }
+            ProxySettings settings = ProxySettings.builder()
+                    .setType(ProxySettings.Type.MTPROTO)
+                    .setAddress(BuildConfig.UGRAM_PROXY_HOST)
+                    .setPort(BuildConfig.UGRAM_PROXY_PORT)
+                    .setSecret(BuildConfig.UGRAM_PROXY_SECRET)
+                    .build();
+            if (!settings.isValid()) {
+                FileLog.e("UGRAM default MTProto proxy configuration is invalid");
+                return;
+            }
+            SharedConfig.loadProxyList();
+            SharedConfig.ProxyInfo info = SharedConfig.addProxy(new SharedConfig.ProxyInfo(settings));
+            SharedConfig.currentProxy = info;
+            preferences.edit()
+                    .putString("proxy_ip", settings.getAddress())
+                    .putInt("proxy_port", settings.getPort())
+                    .putString("proxy_user", "")
+                    .putString("proxy_pass", "")
+                    .putString("proxy_secret", settings.getSecret())
+                    .putInt("proxy_type", ProxySettings.typeToInt(ProxySettings.Type.MTPROTO))
+                    .putBoolean("proxy_enabled", true)
+                    .apply();
+            SharedConfig.saveProxyList();
+            ConnectionsManager.setProxySettings(true, settings);
+        } catch (Throwable error) {
+            FileLog.e(error);
+        }
     }
 
     public ApplicationLoader() {
