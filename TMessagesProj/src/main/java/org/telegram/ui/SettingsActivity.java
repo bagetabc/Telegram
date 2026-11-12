@@ -787,6 +787,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             items.add(UItem.asShadow(null));
         }
+        items.add(UItem.asHeader("UGRAM"));
+        items.add(UItem.asButton(90, "Настройки UGRAM"));
+        items.add(UItem.asShadow(null));
 
         final boolean walletAbove = getConnectionsManager().getCurrentTime() - 1791538462 < 4 * 7 * 24 * 60 * 60;
         if (walletAbove && getMessagesController().config.walletAvailable.get()) {
@@ -917,6 +920,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             return;
         }
         switch (item.id) {
+            case 90:
+                presentSettingFragment(new UgramSettingsActivity());
+                break;
             case 1:
                 presentSettingFragment(new UserInfoActivity());
                 break;
