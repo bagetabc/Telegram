@@ -93,6 +93,8 @@
     </queries>
 
     <application
+        android:icon="@drawable/ugram_launcher"
+        android:roundIcon="@drawable/ugram_launcher"
         android:name="org.telegram.messenger.ApplicationLoader"
         android:allowBackup="true"
         android:restoreAnyVersion="true"
@@ -114,6 +116,8 @@
         <activity-alias
             android:enabled="true"
             android:name="org.telegram.messenger.DefaultIcon"
+            android:icon="@drawable/ugram_launcher"
+            android:roundIcon="@drawable/ugram_launcher"
             android:targetActivity="org.telegram.ui.LaunchActivity"
             android:exported="true">
 
