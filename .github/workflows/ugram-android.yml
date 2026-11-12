@@ -1,0 +1,79 @@
+name: UGRAM Android build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ugram-dev
+    paths:
+      - 'TMessagesProj/**'
+      - 'TMessagesProj_App/**'
+      - 'TMessagesProj_Modules/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - '.github/workflows/ugram-android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ugram-android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Build UGRAM APK (Android / arm64 + universal)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android native toolchain
+        run: |
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1" "ndk;27.2.12479018"
+
+      - name: Prepare local build properties
+        env:
+          UGRAM_PROXY_HOST: ${{ secrets.UGRAM_PROXY_HOST }}
+          UGRAM_PROXY_PORT: ${{ secrets.UGRAM_PROXY_PORT }}
+          UGRAM_PROXY_SECRET: ${{ secrets.UGRAM_PROXY_SECRET }}
+        run: |
+          {
+            echo "sdk.dir=$ANDROID_HOME"
+            echo "UGRAM_PROXY_HOST=$UGRAM_PROXY_HOST"
+            echo "UGRAM_PROXY_PORT=${UGRAM_PROXY_PORT:-0}"
+            echo "UGRAM_PROXY_SECRET=$UGRAM_PROXY_SECRET"
+          } > local.properties
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        run: ./gradlew :TMessagesProj_App:assembleAfatDebug --no-daemon --stacktrace
+
+      - name: Verify APK
+        run: |
+          test -s TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
+          ls -lh TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
+
+      - name: Upload UGRAM APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: UGRAM-Android-debug
+          path: TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
+          if-no-files-found: error
+          retention-days: 14
