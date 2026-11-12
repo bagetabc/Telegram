@@ -145,6 +145,12 @@ android {
     }
 
     defaultConfig {
+        def ugramProxyHost = getProps("UGRAM_PROXY_HOST") ?: ""
+        def ugramProxySecret = getProps("UGRAM_PROXY_SECRET") ?: ""
+        def ugramProxyPort = getProps("UGRAM_PROXY_PORT") ?: "0"
+        buildConfigField "String", "UGRAM_PROXY_HOST", '"' + ugramProxyHost.replace('"', '') + '"'
+        buildConfigField "String", "UGRAM_PROXY_SECRET", '"' + ugramProxySecret.replace('"', '') + '"'
+        buildConfigField "int", "UGRAM_PROXY_PORT", ugramProxyPort
         minSdkVersion 23
         targetSdkVersion 36
 
