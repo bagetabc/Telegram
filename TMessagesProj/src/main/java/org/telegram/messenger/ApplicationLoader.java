@@ -323,7 +323,7 @@ public class ApplicationLoader extends Application {
                     .putBoolean("proxy_enabled", true)
                     .apply();
             SharedConfig.saveProxyList();
-            ConnectionsManager.setProxySettings(true, settings);
+            // ConnectionsManager reads these persisted settings while each account initializes.
         } catch (Throwable error) {
             FileLog.e(error);
         }
